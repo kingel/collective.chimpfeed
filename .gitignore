@@ -1,4 +1,5 @@
 *.pyc
+*.mo
 *.egg-info
 .svn
 build
@@ -8,4 +9,4 @@ bin
 develop-eggs
 setup.cfg
 parts
-
+var
