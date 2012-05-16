@@ -167,4 +167,12 @@
       provides=".interfaces.INameSplitter"
       />
 
+  <browser:view
+        for="*"
+        name="send-as-newsletter"
+        class=".send-as-newsletter.SendAsNewsletter"
+        permission="zope.Public"
+        allowed_attributes="results"
+        />
+
 </configure>
