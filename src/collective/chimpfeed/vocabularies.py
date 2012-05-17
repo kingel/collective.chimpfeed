@@ -102,6 +102,15 @@ class MailChimpVocabulary(VocabularyBase):
         return results
 
     @cache(lambda *args: time.time() // (5 * 60))
+    def get_templates(self):
+        results = []
+        templates = self.api(method="templates")
+        for result in templates['user']:
+            results.append((result['id'], result['name']))
+
+        return results
+
+    @cache(lambda *args: time.time() // (5 * 60))
     def get_groupings(self):
         results = []
 
@@ -118,6 +127,11 @@ class MailChimpVocabulary(VocabularyBase):
 class ListVocabulary(MailChimpVocabulary):
     def get_terms(self):
         for value, name in self.get_lists():
+            yield SimpleTerm(value, value, name)
+
+class TemplateVocabulary(MailChimpVocabulary):
+    def get_terms(self):
+        for value, name in self.get_templates():
             yield SimpleTerm(value, value, name)
 
 
@@ -167,6 +181,7 @@ class InterestGroupingVocabulary(MailChimpVocabulary):
 
 feeds_factory = FeedVocabulary()
 lists_factory = ListVocabulary()
+templates_factory = TemplateVocabulary()
 interest_groupings_factory = InterestGroupingVocabulary()
 interest_groups_factory = InterestGroupVocabulary()
 scheduled_items = ScheduledItems()

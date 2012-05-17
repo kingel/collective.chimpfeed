@@ -123,6 +123,11 @@
       />
 
   <utility
+      component=".vocabularies.templates_factory"
+      name="collective.chimpfeed.vocabularies.Templates"
+      />
+
+  <utility
       component=".vocabularies.interest_groupings_factory"
       name="collective.chimpfeed.vocabularies.InterestGroupings"
       />

@@ -22,6 +22,12 @@ class ISendAsNewsletter(Interface):
         vocabulary="collective.chimpfeed.vocabularies.Lists",
         )
 
+    template = schema.Choice(
+        title=_(u"Which template to use"),
+        required=True,
+        vocabulary="collective.chimpfeed.vocabularies.Templates",
+        )
+
     send_scheduled = schema.Datetime(
         title=_(u"Send scheduled"),
         required=False,
@@ -37,6 +43,10 @@ class SendAsNewsletter(BaseForm):
 
     fields = field.Fields(ISendAsNewsletter)
     fields['send_scheduled'].widgetFactory = DatetimeFieldWidget
+
+    def action(self):
+        # Needed in case of default_page and/or named view
+        return self.request.get('ACTUAL_URL')
 
     @button.buttonAndHandler(_(u'Send'))
     def handleApply(self, action):
@@ -54,19 +64,15 @@ class SendAsNewsletter(BaseForm):
                    "from_email": "franklin@fourdigits.nl",
                    "from_name": "Franklin Kingma",
                    "auto_footer": "True",
-                   "template_id": "147237",
+                   "template_id": data['template'],
                      }
 
-        # import pdb; pdb.set_trace( )
+        try:
+            content = self.context.getText()
+        except:
+            content = self.context[self.context.default_page].getText()
 
-        # bla = self.context()
-        # bla = bla.encode('utf-8')
-        # document = lxml.html.fromstring(bla)
-        # content = document.cssselect("div#content")
-
-        # content = {'html': lxml.html.tostring(content[0])}
-
-        content = {'html_MAIN': self.context.getText(),
+        content = {'html_MAIN': content,
                    'generate_text': True}
 
         campaign_id = api.campaignCreate(type="regular",
@@ -74,12 +80,14 @@ class SendAsNewsletter(BaseForm):
                                          content=content)
 
         if data['send_scheduled']:
-            # schedule_time   the time to schedule the campaign.
-            # For A/B Split "schedule" campaigns, the time for Group A -
-            # in YYYY-MM-DD HH:II:SS format in GMT
+            # TODO: Get values from form
+            # api in: YYYY-MM-DD HH:II:SS format in GMT
             results = api.campaignSchedule(cid=campaign_id,
                                            schedule_time=data['schedule_time'])
 
         if data['send_now']:
             results = api.campaignSendNow(cid=campaign_id)
+
+        self.status = _(u"Newsletter send (%s)" % (results))
+
 
