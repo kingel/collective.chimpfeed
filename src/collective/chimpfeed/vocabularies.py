@@ -95,7 +95,8 @@ class MailChimpVocabulary(VocabularyBase):
     @cache(lambda *args: time.time() // (5 * 60))
     def get_lists(self):
         results = []
-        for result in self.api(method="lists"):
+        lists = self.api(method="lists")
+        for result in lists['data']:
             results.append((result['id'], result['name']))
 
         return results

@@ -34,6 +34,7 @@ setup(name='collective.chimpfeed',
           'greatape',
           'simplejson',
           'Products.AdvancedQuery',
+          'collective.z3cform.datetimewidget',
       ],
       entry_points="""
       [z3c.autoinclude.plugin]

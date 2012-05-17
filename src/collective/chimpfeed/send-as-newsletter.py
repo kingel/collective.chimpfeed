@@ -1,53 +1,85 @@
 import greatape
-
-from Products.Five.browser import BrowserView
-from Products.CMFCore.utils import getToolByName
-
-from collective.chimpfeed.interfaces import IFeedSettings
-
 import lxml.html
 
+from zope import schema
+from zope.interface import Interface
 
-class SendAsNewsletter(BrowserView):
-    """The recent portlet
-    """
+from z3c.form import field
+from z3c.form import button
 
-    def index(self):
+from collective.chimpfeed.interfaces import IFeedSettings
+from collective.chimpfeed.form import BaseForm
+from collective.chimpfeed import MessageFactory as _
+
+# from plone.formwidget.datetime.z3cform.widget import DatetimeFieldWidget
+from collective.z3cform.datetimewidget import DatetimeFieldWidget
+
+
+class ISendAsNewsletter(Interface):
+    list = schema.Choice(
+        title=_(u"Send through list"),
+        required=True,
+        vocabulary="collective.chimpfeed.vocabularies.Lists",
+        )
+
+    send_scheduled = schema.Datetime(
+        title=_(u"Send scheduled"),
+        required=False,
+        )
+
+    send_now = schema.Bool(
+        title=_(u"Send now"),
+        required=False,
+        )
+
+
+class SendAsNewsletter(BaseForm):
+
+    fields = field.Fields(ISendAsNewsletter)
+    fields['send_scheduled'].widgetFactory = DatetimeFieldWidget
+
+    @button.buttonAndHandler(_(u'Send'))
+    def handleApply(self, action):
+        data, errors = self.extractData()
+        if errors:
+            self.status = self.formErrorsMessage
+            return
+
         settings = IFeedSettings(self.context)
         api_key = settings.mailchimp_api_key
         api = greatape.MailChimp(api_key, debug=True)
 
-        options = {"list_id": "3e34449235",
-                   "subject": "test",
+        options = {"list_id": data['list'],
+                   "subject": self.context.title,
                    "from_email": "franklin@fourdigits.nl",
                    "from_name": "Franklin Kingma",
                    "auto_footer": "True",
+                   "template_id": "147237",
                      }
 
-        bla = self.context()
-        bla = bla.encode('utf-8')
+        # import pdb; pdb.set_trace( )
 
-        document = lxml.html.fromstring(bla)
-        content = document.cssselect("div#content")
+        # bla = self.context()
+        # bla = bla.encode('utf-8')
+        # document = lxml.html.fromstring(bla)
+        # content = document.cssselect("div#content")
 
-        content = {'html': lxml.html.tostring(content[0])}
+        # content = {'html': lxml.html.tostring(content[0])}
+
+        content = {'html_MAIN': self.context.getText(),
+                   'generate_text': True}
 
         campaign_id = api.campaignCreate(type="regular",
                                          options=options,
                                          content=content)
 
-        results = api.campaignSendNow(cid=campaign_id)
+        if data['send_scheduled']:
+            # schedule_time   the time to schedule the campaign.
+            # For A/B Split "schedule" campaigns, the time for Group A -
+            # in YYYY-MM-DD HH:II:SS format in GMT
+            results = api.campaignSchedule(cid=campaign_id,
+                                           schedule_time=data['schedule_time'])
 
-    def results(self):
-        """Get the search results
-        """
-        context = aq_inner(self.context)
-        putils = getToolByName(context, 'plone_utils')
-        portal_catalog = getToolByName(context, 'portal_catalog')
-        typesToShow = putils.getUserFriendlyTypes()
-        return self.request.get(
-            'items',
-            portal_catalog.searchResults(sort_on='modified',
-                                         portal_type=typesToShow,
-                                         sort_order='reverse',
-                                         sort_limit=5)[:5])
+        if data['send_now']:
+            results = api.campaignSendNow(cid=campaign_id)
+
